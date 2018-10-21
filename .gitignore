@@ -1,0 +1,8 @@
+dist
+node_modules
+crate/pkg
+crate/target
+crate/wasm-pack.log
+crate/bin
+.idea
+.bin

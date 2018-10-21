@@ -41,6 +41,11 @@ cfg_if! {
 }
 const TAU: f32 = 2. * std::f32::consts::PI;
 
+struct RenderSystem {
+    gl: WebGl2RenderingContext,
+}
+
+
 #[derive(Debug)]
 struct ClusterBomb {
     fuse: usize,
@@ -85,7 +90,6 @@ impl<'a> System<'a> for ClusterBombSystem {
     );
 
     fn run(&mut self, (entities, mut bombs, positions, updater): Self::SystemData) {
-        // Join components in potentially parallel way using rayon.
         (&entities, &mut bombs, &positions)
             .join()
             .for_each(|(entity, bomb, position)| {
@@ -160,8 +164,8 @@ pub fn draw() {
     let vert_shader = compile_shader(
         &context,
         WebGl2RenderingContext::VERTEX_SHADER,
-        r#"
-        attribute vec4 position;
+        r#"#version 300 es
+        layout(location = 0) in vec4 position;
         void main() {
             gl_Position = position;
         }
@@ -171,9 +175,12 @@ pub fn draw() {
     let frag_shader = compile_shader(
         &context,
         WebGl2RenderingContext::FRAGMENT_SHADER,
-        r#"
+        r#"#version 300 es
+        precision mediump float;
+        out vec4 fragColor;
+
         void main() {
-            gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+            fragColor = vec4(1.0, 0.0, 1.0, 1.0);
         }
     "#,
     )

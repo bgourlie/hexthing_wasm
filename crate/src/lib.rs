@@ -2,21 +2,20 @@
 
 #[macro_use]
 extern crate cfg_if;
-extern crate wasm_bindgen;
 extern crate js_sys;
-extern crate specs;
-extern crate web_sys;
 extern crate rand;
+extern crate specs;
+extern crate wasm_bindgen;
+extern crate web_sys;
 
+use js_sys::WebAssembly;
+use rand::distributions::Distribution;
 use rand::Rng;
-use rand::distributions::{Distribution};
 use specs::prelude::*;
 use specs::storage::HashMapStorage;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::{JsCast, JsValue};
-use js_sys::{WebAssembly};
-use web_sys::{console, WebGlProgram, WebGl2RenderingContext, WebGlShader};
-
+use web_sys::{console, WebGl2RenderingContext, WebGlProgram, WebGlShader};
 
 macro_rules! console_log {
     ($($t:tt)*) => (console::log_1(JsValue::from_str(&format_args!($($t)*).to_string()).as_ref());)
@@ -167,7 +166,8 @@ pub fn draw() {
             gl_Position = position;
         }
     "#,
-    ).unwrap();
+    )
+    .unwrap();
     let frag_shader = compile_shader(
         &context,
         WebGl2RenderingContext::FRAGMENT_SHADER,
@@ -176,17 +176,19 @@ pub fn draw() {
             gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
         }
     "#,
-    ).unwrap();
+    )
+    .unwrap();
     let program = link_program(&context, [vert_shader, frag_shader].iter()).unwrap();
     context.use_program(Some(&program));
 
     let vertices: [f32; 9] = [-0.7, -0.7, 0.0, 0.7, -0.7, 0.0, 0.0, 0.7, 0.0];
-    let memory_buffer = wasm_bindgen::memory().dyn_into::<WebAssembly::Memory>().unwrap().buffer();
+    let memory_buffer = wasm_bindgen::memory()
+        .dyn_into::<WebAssembly::Memory>()
+        .unwrap()
+        .buffer();
     let vertices_location = vertices.as_ptr() as u32 / 4;
-    let vert_array = js_sys::Float32Array::new(&memory_buffer).subarray(
-        vertices_location,
-        vertices_location + vertices.len() as u32,
-    );
+    let vert_array = js_sys::Float32Array::new(&memory_buffer)
+        .subarray(vertices_location, vertices_location + vertices.len() as u32);
 
     let buffer = context.create_buffer().unwrap();
     context.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(&buffer));
@@ -279,9 +281,9 @@ pub fn compile_shader(
         .get_shader_parameter(&shader, WebGl2RenderingContext::COMPILE_STATUS)
         .as_bool()
         .unwrap_or(false)
-        {
-            Ok(shader)
-        } else {
+    {
+        Ok(shader)
+    } else {
         Err(context
             .get_shader_info_log(&shader)
             .unwrap_or_else(|| "Unknown error creating shader".into()))
@@ -304,9 +306,9 @@ pub fn link_program<'a, T: IntoIterator<Item = &'a WebGlShader>>(
         .get_program_parameter(&program, WebGl2RenderingContext::LINK_STATUS)
         .as_bool()
         .unwrap_or(false)
-        {
-            Ok(program)
-        } else {
+    {
+        Ok(program)
+    } else {
         Err(context
             .get_program_info_log(&program)
             .unwrap_or_else(|| "Unknown error creating program object".into()))

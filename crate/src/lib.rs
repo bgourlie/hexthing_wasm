@@ -10,7 +10,7 @@ extern crate web_sys;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use js_sys::{WebAssembly};
-use web_sys::{WebGlProgram, WebGlRenderingContext, WebGlShader};
+use web_sys::{WebGlProgram, WebGl2RenderingContext, WebGlShader};
 
 cfg_if! {
     // When the `console_error_panic_hook` feature is enabled, we can call the
@@ -41,15 +41,15 @@ pub fn draw() {
         .unwrap();
 
     let context = canvas
-        .get_context("webgl")
+        .get_context("webgl2")
         .unwrap()
         .unwrap()
-        .dyn_into::<WebGlRenderingContext>()
+        .dyn_into::<WebGl2RenderingContext>()
         .unwrap();
 
     let vert_shader = compile_shader(
         &context,
-        WebGlRenderingContext::VERTEX_SHADER,
+        WebGl2RenderingContext::VERTEX_SHADER,
         r#"
         attribute vec4 position;
         void main() {
@@ -59,7 +59,7 @@ pub fn draw() {
     ).unwrap();
     let frag_shader = compile_shader(
         &context,
-        WebGlRenderingContext::FRAGMENT_SHADER,
+        WebGl2RenderingContext::FRAGMENT_SHADER,
         r#"
         void main() {
             gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
@@ -78,27 +78,27 @@ pub fn draw() {
     );
 
     let buffer = context.create_buffer().unwrap();
-    context.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&buffer));
+    context.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(&buffer));
     context.buffer_data_with_array_buffer_view(
-        WebGlRenderingContext::ARRAY_BUFFER,
+        WebGl2RenderingContext::ARRAY_BUFFER,
         vert_array.as_ref(),
-        WebGlRenderingContext::STATIC_DRAW,
+        WebGl2RenderingContext::STATIC_DRAW,
     );
-    context.vertex_attrib_pointer_with_i32(0, 3, WebGlRenderingContext::FLOAT, false, 0, 0);
+    context.vertex_attrib_pointer_with_i32(0, 3, WebGl2RenderingContext::FLOAT, false, 0, 0);
     context.enable_vertex_attrib_array(0);
 
     context.clear_color(0.0, 0.0, 0.0, 1.0);
-    context.clear(WebGlRenderingContext::COLOR_BUFFER_BIT);
+    context.clear(WebGl2RenderingContext::COLOR_BUFFER_BIT);
 
     context.draw_arrays(
-        WebGlRenderingContext::TRIANGLES,
+        WebGl2RenderingContext::TRIANGLES,
         0,
         (vertices.len() / 3) as i32,
     );
 }
 
 pub fn compile_shader(
-    context: &WebGlRenderingContext,
+    context: &WebGl2RenderingContext,
     shader_type: u32,
     source: &str,
 ) -> Result<WebGlShader, String> {
@@ -109,7 +109,7 @@ pub fn compile_shader(
     context.compile_shader(&shader);
 
     if context
-        .get_shader_parameter(&shader, WebGlRenderingContext::COMPILE_STATUS)
+        .get_shader_parameter(&shader, WebGl2RenderingContext::COMPILE_STATUS)
         .as_bool()
         .unwrap_or(false)
         {
@@ -122,7 +122,7 @@ pub fn compile_shader(
 }
 
 pub fn link_program<'a, T: IntoIterator<Item = &'a WebGlShader>>(
-    context: &WebGlRenderingContext,
+    context: &WebGl2RenderingContext,
     shaders: T,
 ) -> Result<WebGlProgram, String> {
     let program = context
@@ -134,7 +134,7 @@ pub fn link_program<'a, T: IntoIterator<Item = &'a WebGlShader>>(
     context.link_program(&program);
 
     if context
-        .get_program_parameter(&program, WebGlRenderingContext::LINK_STATUS)
+        .get_program_parameter(&program, WebGl2RenderingContext::LINK_STATUS)
         .as_bool()
         .unwrap_or(false)
         {

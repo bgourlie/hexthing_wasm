@@ -12,7 +12,7 @@ extern crate web_sys;
 
 use fnv::FnvHashMap;
 use js_sys::{Float32Array, WebAssembly};
-use nalgebra::{Vector3, Translation3, Perspective3, Matrix4};
+use nalgebra::{Matrix4, Perspective3, Translation3, Vector3};
 use specs::prelude::*;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::{JsCast, JsValue};
@@ -71,7 +71,9 @@ impl<'a> System<'a> for RenderSystem {
     );
 
     fn run(&mut self, (projection_matrix, positions, rendereds): Self::SystemData) {
-        self.gl.clear(WebGl2RenderingContext::COLOR_BUFFER_BIT | WebGl2RenderingContext::DEPTH_BUFFER_BIT);
+        self.gl.clear(
+            WebGl2RenderingContext::COLOR_BUFFER_BIT | WebGl2RenderingContext::DEPTH_BUFFER_BIT,
+        );
         (&positions, &rendereds)
             .join()
             .for_each(|(position, rendered)| {
@@ -81,21 +83,33 @@ impl<'a> System<'a> for RenderSystem {
                 self.gl.bind_vertex_array(Some(&renderer.vao));
 
                 for input in &renderer.definition.inputs {
-                    self.gl.buffer_data_with_opt_array_buffer(input.buffer_type, Some(&input.vertices.buffer()), WebGl2RenderingContext::STATIC_DRAW);
+                    self.gl.buffer_data_with_opt_array_buffer(
+                        input.buffer_type,
+                        Some(&input.vertices.buffer()),
+                        WebGl2RenderingContext::STATIC_DRAW,
+                    );
                 }
 
                 self.gl.use_program(Some(&renderer.program));
 
-                let model_view_matrix = Matrix4::<f64>::identity() * position;
-//                const modelViewMatrix = mat4.create();
+                let model_view_matrix = Matrix4::<f64>::identity();
+                //                const modelViewMatrix = mat4.create();
 
-//                mat4.translate(modelViewMatrix, modelViewMatrix, entity.sceneTransform);
+                //                mat4.translate(modelViewMatrix, modelViewMatrix, entity.sceneTransform);
 
-                self.gl.uniform_matrix4fv_with_f32_array(Some(&renderer.projection_matrix_location), false, projection_matrix.perspective.as_matrix().data.clone().as_mut_slice());
-//                self.gl.uniformMatrix4fv(entityRenderer.modelViewMatrixLocation, false, modelViewMatrix);
-//                self.gl.drawArrays(entityRenderer.descriptor.drawMode, 0, entityRenderer.descriptor.verticesToRender);
+                self.gl.uniform_matrix4fv_with_f32_array(
+                    Some(&renderer.projection_matrix_location),
+                    false,
+                    projection_matrix
+                        .perspective
+                        .as_matrix()
+                        .data
+                        .clone()
+                        .as_mut_slice(),
+                );
+                //                self.gl.uniformMatrix4fv(entityRenderer.modelViewMatrixLocation, false, modelViewMatrix);
+                //                self.gl.drawArrays(entityRenderer.descriptor.drawMode, 0, entityRenderer.descriptor.verticesToRender);
                 self.gl.bind_vertex_array(None);
-
             })
     }
 }

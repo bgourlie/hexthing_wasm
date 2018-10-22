@@ -12,7 +12,7 @@ extern crate web_sys;
 
 use fnv::FnvHashMap;
 use js_sys::{Float32Array, WebAssembly};
-use nalgebra::{Vector3, Perspective3, Matrix4};
+use nalgebra::{Vector3, Translation3, Perspective3, Matrix4};
 use specs::prelude::*;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::{JsCast, JsValue};
@@ -86,8 +86,9 @@ impl<'a> System<'a> for RenderSystem {
 
                 self.gl.use_program(Some(&renderer.program));
 
-                let model_view_matrix = Matrix4::<f64>::identity();
+                let model_view_matrix = Matrix4::<f64>::identity() * position;
 //                const modelViewMatrix = mat4.create();
+
 //                mat4.translate(modelViewMatrix, modelViewMatrix, entity.sceneTransform);
 
                 self.gl.uniform_matrix4fv_with_f32_array(Some(&renderer.projection_matrix_location), false, projection_matrix.perspective.as_matrix().data.clone().as_mut_slice());

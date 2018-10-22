@@ -12,7 +12,7 @@ extern crate web_sys;
 
 use fnv::FnvHashMap;
 use js_sys::{Float32Array, WebAssembly};
-use nalgebra::Perspective3;
+use nalgebra::{Vector3, Perspective3, Matrix4};
 use specs::prelude::*;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::{JsCast, JsValue};
@@ -71,11 +71,30 @@ impl<'a> System<'a> for RenderSystem {
     );
 
     fn run(&mut self, (projection_matrix, positions, rendereds): Self::SystemData) {
-        console_log!("projection_matrix: {:?}", *projection_matrix);
+        self.gl.clear(WebGl2RenderingContext::COLOR_BUFFER_BIT | WebGl2RenderingContext::DEPTH_BUFFER_BIT);
         (&positions, &rendereds)
             .join()
             .for_each(|(position, rendered)| {
                 console_log!("{:?} {:?}", position, rendered);
+                let renderer = self.renderers.get(&rendered.renderable_id).unwrap();
+
+                self.gl.bind_vertex_array(Some(&renderer.vao));
+
+                for input in &renderer.definition.inputs {
+                    self.gl.buffer_data_with_opt_array_buffer(input.buffer_type, Some(&input.vertices.buffer()), WebGl2RenderingContext::STATIC_DRAW);
+                }
+
+                self.gl.use_program(Some(&renderer.program));
+
+                let model_view_matrix = Matrix4::<f64>::identity();
+//                const modelViewMatrix = mat4.create();
+//                mat4.translate(modelViewMatrix, modelViewMatrix, entity.sceneTransform);
+
+                self.gl.uniform_matrix4fv_with_f32_array(Some(&renderer.projection_matrix_location), false, projection_matrix.perspective.as_matrix().data.clone().as_mut_slice());
+//                self.gl.uniformMatrix4fv(entityRenderer.modelViewMatrixLocation, false, modelViewMatrix);
+//                self.gl.drawArrays(entityRenderer.descriptor.drawMode, 0, entityRenderer.descriptor.verticesToRender);
+                self.gl.bind_vertex_array(None);
+
             })
     }
 }
@@ -120,9 +139,15 @@ impl RenderSystemBuilder {
                     );
                 }
 
-                let renderer = Self::compile(&gl, &definition).unwrap();
-                renderers.insert(definition.id, renderer);
+                let renderer_id = definition.id.clone();
+                let renderer = Self::compile(&gl, definition).unwrap();
+                renderers.insert(renderer_id, renderer);
             }
+
+            gl.clear_color(0.0, 0.0, 0.0, 1.0);
+            gl.clear(WebGl2RenderingContext::COLOR_BUFFER_BIT);
+            gl.enable(WebGl2RenderingContext::DEPTH_TEST);
+            gl.depth_func(WebGl2RenderingContext::LEQUAL);
 
             Ok(RenderSystem { gl, renderers })
         } else {
@@ -132,7 +157,7 @@ impl RenderSystemBuilder {
 
     fn compile(
         gl: &WebGl2RenderingContext,
-        definition: &RenderableDefinition,
+        definition: RenderableDefinition,
     ) -> Result<Renderable, String> {
         console_log!("Compiling render {}", definition.id);
         let vert_shader = Self::compile_shader(
@@ -179,6 +204,7 @@ impl RenderSystemBuilder {
         gl.bind_vertex_array(None);
 
         Ok(Renderable {
+            definition,
             program,
             vao,
             projection_matrix_location,
@@ -257,6 +283,7 @@ struct InputDescriptor {
 
 #[derive(Debug)]
 struct Renderable {
+    definition: RenderableDefinition,
     program: WebGlProgram,
     vao: WebGlVertexArrayObject,
     projection_matrix_location: WebGlUniformLocation,
@@ -273,7 +300,7 @@ impl Component for Rendered {
 }
 
 #[derive(Debug, Clone)]
-struct Pos(f32, f32);
+struct Pos(Vector3<f32>);
 impl Component for Pos {
     type Storage = VecStorage<Self>;
 }
@@ -390,7 +417,7 @@ pub fn draw() {
 
     world
         .create_entity()
-        .with(Pos(0., 0.))
+        .with(Pos(Vector3::new(0.0, 0.0, -10.0)))
         .with(Rendered {
             renderable_id: "hexTile".to_owned(),
         })

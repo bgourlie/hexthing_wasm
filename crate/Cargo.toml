@@ -16,6 +16,8 @@ cfg-if = "^0.1.5"
 wasm-bindgen = "^0.2.25"
 js-sys = "^0.3.2"
 rand = { git = "https://github.com/rust-random/rand.git", features = ["wasm-bindgen"] }
+fnv = "^1.0.3"
+nalgebra = "^0.16.5"
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
@@ -33,6 +35,7 @@ version = "^0.3.2"
 features = [
   'console',
   'Document',
+  'HtmlCanvasElement',
   'HtmlElement',
   'Element',
   'Window',
@@ -41,6 +44,8 @@ features = [
   'WebGl2RenderingContext',
   'WebGlProgram',
   'WebGlShader',
+  'WebGlVertexArrayObject',
+  'WebGlUniformLocation'
 ]
 
 [dependencies.specs]

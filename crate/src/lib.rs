@@ -18,7 +18,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{
     console, HtmlCanvasElement, WebGl2RenderingContext, WebGlProgram, WebGlShader,
-    WebGlVertexArrayObject,
+    WebGlUniformLocation, WebGlVertexArrayObject,
 };
 
 macro_rules! console_log {
@@ -151,6 +151,13 @@ impl RenderSystemBuilder {
 
         let program = Self::link_program(gl, [vert_shader, frag_shader].iter()).unwrap();
 
+        let projection_matrix_location = gl
+            .get_uniform_location(&program, "uProjectionMatrix")
+            .unwrap();
+        let model_view_matrix_location = gl
+            .get_uniform_location(&program, "uModelViewMatrix")
+            .unwrap();
+
         let vao = gl.create_vertex_array().unwrap();
         let buffer = gl.create_buffer().unwrap();
 
@@ -171,7 +178,12 @@ impl RenderSystemBuilder {
 
         gl.bind_vertex_array(None);
 
-        Ok(Renderable { program, vao })
+        Ok(Renderable {
+            program,
+            vao,
+            projection_matrix_location,
+            model_view_matrix_location,
+        })
     }
 
     fn compile_shader(
@@ -234,8 +246,6 @@ struct RenderableDefinition {
     vertices_to_render: i32,
 }
 
-impl RenderableDefinition {}
-
 #[derive(Debug)]
 struct InputDescriptor {
     location: u32,
@@ -249,8 +259,8 @@ struct InputDescriptor {
 struct Renderable {
     program: WebGlProgram,
     vao: WebGlVertexArrayObject,
-    //    projection_matrix_location: WebGlUniformLocation,
-    //    model_view_matrix_location: WebGlUniformLocation,
+    projection_matrix_location: WebGlUniformLocation,
+    model_view_matrix_location: WebGlUniformLocation,
 }
 
 #[derive(Debug)]
@@ -259,14 +269,12 @@ struct Rendered {
 }
 
 impl Component for Rendered {
-    // This uses `HashMapStorage`, because only some entities are cluster bombs.
     type Storage = DenseVecStorage<Self>;
 }
 
 #[derive(Debug, Clone)]
 struct Pos(f32, f32);
 impl Component for Pos {
-    // This uses `VecStorage`, because all entities have a position.
     type Storage = VecStorage<Self>;
 }
 

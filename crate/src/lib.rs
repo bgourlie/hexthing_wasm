@@ -12,7 +12,7 @@ extern crate web_sys;
 
 use fnv::FnvHashMap;
 use js_sys::{Float32Array, WebAssembly};
-use nalgebra::{Matrix4, Perspective3, Translation3, Vector3};
+use nalgebra::{Matrix4, Perspective3, Translation, Vector3};
 use specs::prelude::*;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::{JsCast, JsValue};
@@ -76,8 +76,7 @@ impl<'a> System<'a> for RenderSystem {
         );
         (&positions, &rendereds)
             .join()
-            .for_each(|(position, rendered)| {
-                console_log!("{:?} {:?}", position, rendered);
+            .for_each(|(Pos(position), rendered)| {
                 let renderer = self.renderers.get(&rendered.renderable_id).unwrap();
 
                 self.gl.bind_vertex_array(Some(&renderer.vao));
@@ -90,20 +89,14 @@ impl<'a> System<'a> for RenderSystem {
                     );
                 }
 
+                let model_view_matrix = Translation::from_vector(*position).to_homogeneous();
                 self.gl.use_program(Some(&renderer.program));
-
-                let model_view_matrix = Matrix4::<f64>::identity();
-                //                const modelViewMatrix = mat4.create();
-
-                //                mat4.translate(modelViewMatrix, modelViewMatrix, entity.sceneTransform);
-
                 self.gl.uniform_matrix4fv_with_f32_array(
                     Some(&renderer.projection_matrix_location),
                     false,
                     projection_matrix
                         .perspective
                         .as_matrix()
-                        .data
                         .clone()
                         .as_mut_slice(),
                 );
@@ -419,9 +412,12 @@ pub fn draw() {
     let mut world = World::new();
 
     let fov = 45.0 * std::f32::consts::PI / 180.0;
+    let aspect_ratio = 1.0;
+    let z_near = 0.1;
+    let z_far = 100.0;
 
     world.add_resource(ProjectionMatrix {
-        perspective: Perspective3::new(1.0, fov, 0.1, 100.0),
+        perspective: Perspective3::new(aspect_ratio, fov, z_near, z_far),
     });
 
     let mut dispatcher = DispatcherBuilder::new()
@@ -432,7 +428,7 @@ pub fn draw() {
 
     world
         .create_entity()
-        .with(Pos(Vector3::new(0.0, 0.0, -10.0)))
+        .with(Pos(Vector3::new(0.0, 0.0, -8.0)))
         .with(Rendered {
             renderable_id: "hexTile".to_owned(),
         })

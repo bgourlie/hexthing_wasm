@@ -12,7 +12,7 @@ extern crate web_sys;
 
 use fnv::FnvHashMap;
 use js_sys::{Float32Array, WebAssembly};
-use nalgebra::{Matrix4, Perspective3, Translation, Vector3};
+use nalgebra::{Matrix4, Translation, Vector3};
 use specs::prelude::*;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::{JsCast, JsValue};
@@ -47,13 +47,13 @@ const TAU: f32 = 2. * std::f32::consts::PI;
 
 #[derive(Debug)]
 struct ProjectionMatrix {
-    perspective: Perspective3<f32>,
+    perspective: Matrix4<f32>,
 }
 
 impl Default for ProjectionMatrix {
     fn default() -> Self {
         ProjectionMatrix {
-            perspective: Perspective3::new(0.0, 0.0, 0.0, 0.0),
+            perspective: Matrix4::new_perspective(0.0, 0.0, 0.0, 0.0),
         }
     }
 }
@@ -65,12 +65,12 @@ struct RenderSystem {
 
 impl<'a> System<'a> for RenderSystem {
     type SystemData = (
-        Read<'a, ProjectionMatrix>,
+        Write<'a, ProjectionMatrix>, // Ideally would be Read, see https://github.com/rustwasm/wasm-bindgen/issues/978
         ReadStorage<'a, Pos>,
         ReadStorage<'a, Rendered>,
     );
 
-    fn run(&mut self, (projection_matrix, positions, rendereds): Self::SystemData) {
+    fn run(&mut self, (mut projection_matrix, positions, rendereds): Self::SystemData) {
         self.gl.clear(
             WebGl2RenderingContext::COLOR_BUFFER_BIT | WebGl2RenderingContext::DEPTH_BUFFER_BIT,
         );
@@ -82,26 +82,33 @@ impl<'a> System<'a> for RenderSystem {
                 self.gl.bind_vertex_array(Some(&renderer.vao));
 
                 for input in &renderer.definition.inputs {
-                    self.gl.buffer_data_with_opt_array_buffer(
+                    self.gl.buffer_data_with_array_buffer_view(
                         input.buffer_type,
-                        Some(&input.vertices.buffer()),
+                        input.vertices.as_ref(),
                         WebGl2RenderingContext::STATIC_DRAW,
                     );
                 }
 
-                let model_view_matrix = Translation::from_vector(*position).to_homogeneous();
+                let mut model_view_matrix = Translation::from_vector(*position).to_homogeneous();
+
                 self.gl.use_program(Some(&renderer.program));
+
                 self.gl.uniform_matrix4fv_with_f32_array(
                     Some(&renderer.projection_matrix_location),
                     false,
-                    projection_matrix
-                        .perspective
-                        .as_matrix()
-                        .clone()
-                        .as_mut_slice(),
+                    projection_matrix.perspective.as_mut_slice(),
                 );
-                //                self.gl.uniformMatrix4fv(entityRenderer.modelViewMatrixLocation, false, modelViewMatrix);
-                //                self.gl.drawArrays(entityRenderer.descriptor.drawMode, 0, entityRenderer.descriptor.verticesToRender);
+
+                self.gl.uniform_matrix4fv_with_f32_array(
+                    Some(&renderer.model_view_matrix_location),
+                    false,
+                    model_view_matrix.as_mut_slice(),
+                );
+                self.gl.draw_arrays(
+                    renderer.definition.draw_mode,
+                    0,
+                    renderer.definition.vertices_to_render,
+                );
                 self.gl.bind_vertex_array(None);
             })
     }
@@ -322,27 +329,6 @@ pub fn draw() {
         .map_err(|_| ())
         .unwrap();
 
-    //    context.use_program(Some(&program));
-    //
-    //    let buffer = context.create_buffer().unwrap();
-    //    context.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(&buffer));
-    //    context.buffer_data_with_array_buffer_view(
-    //        WebGl2RenderingContext::ARRAY_BUFFER,
-    //        vert_array.as_ref(),
-    //        WebGl2RenderingContext::STATIC_DRAW,
-    //    );
-    //    context.vertex_attrib_pointer_with_i32(0, 3, WebGl2RenderingContext::FLOAT, false, 0, 0);
-    //    context.enable_vertex_attrib_array(0);
-    //
-    //    context.clear_color(0.0, 0.0, 0.0, 1.0);
-    //    context.clear(WebGl2RenderingContext::COLOR_BUFFER_BIT);
-    //
-    //    context.draw_arrays(
-    //        WebGl2RenderingContext::TRIANGLES,
-    //        0,
-    //        (vertices.len() / 3) as i32,
-    //    );
-
     let vertices: [f32; 16] = [
         0.0_f32,
         0.0_f32,
@@ -417,7 +403,7 @@ pub fn draw() {
     let z_far = 100.0;
 
     world.add_resource(ProjectionMatrix {
-        perspective: Perspective3::new(aspect_ratio, fov, z_near, z_far),
+        perspective: Matrix4::new_perspective(aspect_ratio, fov, z_near, z_far),
     });
 
     let mut dispatcher = DispatcherBuilder::new()

@@ -189,17 +189,23 @@ impl RenderSystemBuilder {
         )
         .unwrap();
 
-        let program = Self::link_program(gl, [vert_shader, frag_shader].iter()).unwrap();
+        let program = Self::link_program(gl, [vert_shader, frag_shader].iter())?;
 
         let projection_matrix_location = gl
             .get_uniform_location(&program, "uProjectionMatrix")
-            .unwrap();
+            .ok_or("Unable to get uniform location for uProjectionMatrix")?;
+
         let model_view_matrix_location = gl
             .get_uniform_location(&program, "uModelViewMatrix")
-            .unwrap();
+            .ok_or("Unable to get uniform location for uModelViewMatrix")?;
 
-        let vao = gl.create_vertex_array().unwrap();
-        let buffer = gl.create_buffer().unwrap();
+        let vao = gl
+            .create_vertex_array()
+            .ok_or("Unable to create vertex array".to_owned())?;
+
+        let buffer = gl
+            .create_buffer()
+            .ok_or("Unable to create buffer".to_owned())?;
 
         gl.bind_vertex_array(Some(&vao));
 

@@ -139,10 +139,10 @@ impl RenderSystemBuilder {
         if let Some(canvas) = self.canvas {
             let gl = canvas
                 .get_context("webgl2")
-                .unwrap()
-                .unwrap()
+                .map_err(|_| "Unable to get rendering context")?
+                .ok_or("Unable to get rendering context")?
                 .dyn_into::<WebGl2RenderingContext>()
-                .unwrap();
+                .map_err(|_| "Unable to get rendering context")?;
 
             let mut renderers = FnvHashMap::default();
 
@@ -155,7 +155,7 @@ impl RenderSystemBuilder {
                 }
 
                 let renderer_id = definition.id.clone();
-                let renderer = Self::compile(&gl, definition).unwrap();
+                let renderer = Self::compile(&gl, definition)?;
                 renderers.insert(renderer_id, renderer);
             }
 
@@ -179,15 +179,13 @@ impl RenderSystemBuilder {
             gl,
             WebGl2RenderingContext::VERTEX_SHADER,
             &definition.vertex_shader,
-        )
-        .unwrap();
+        )?;
 
         let frag_shader = Self::compile_shader(
             gl,
             WebGl2RenderingContext::FRAGMENT_SHADER,
             &definition.fragment_shader,
-        )
-        .unwrap();
+        )?;
 
         let program = Self::link_program(gl, [vert_shader, frag_shader].iter())?;
 
@@ -418,13 +416,37 @@ pub fn draw() {
 
     dispatcher.setup(&mut world.res);
 
-    world
-        .create_entity()
-        .with(Pos(Vector3::new(0.0, 0.0, -8.0)))
-        .with(Rendered {
-            renderable_id: "hexTile".to_owned(),
-        })
-        .build();
+    let size = 1.0;
+    let width = 3.0_f32.sqrt() * size;
+    let height = 2.0 * size;
+    let half_width = width / 2.0;
+    let quarter_height = height * (3.0 / 4.0);
+    let tile_z = -50.0;
+    let padding = 0.03;
+    let mut cur_y = -10.0;
+
+    for i in 0..10 {
+        let start_x = if i % 2 == 0 {
+            -10.0
+        } else {
+            -10.0 - half_width
+        };
+        for j in 0..10 {
+            world
+                .create_entity()
+                .with(Pos(Vector3::new(
+                    padding * (j as f32) + (start_x + width * (j as f32)),
+                    padding * (i as f32) + (cur_y as f32),
+                    tile_z,
+                )))
+                .with(Rendered {
+                    renderable_id: "hexTile".to_owned(),
+                })
+                .build();
+        }
+
+        cur_y += quarter_height;
+    }
 
     dispatcher.dispatch(&world.res);
 

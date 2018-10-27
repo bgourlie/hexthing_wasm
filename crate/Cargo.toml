@@ -49,7 +49,9 @@ features = [
 ]
 
 [dependencies.specs]
-git = "https://github.com/bgourlie/specs.git"
+git = "https://github.com/slide-rs/specs.git"
+rev = "8e80134"
+
 default-features = false
 
 [features]

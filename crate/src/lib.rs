@@ -1,6 +1,3 @@
-#![feature(use_extern_macros)]
-
-#[macro_use]
 extern crate cfg_if;
 extern crate fnv;
 extern crate js_sys;
@@ -10,6 +7,7 @@ extern crate specs;
 extern crate wasm_bindgen;
 extern crate web_sys;
 
+use cfg_if::cfg_if;
 use fnv::FnvHashMap;
 use js_sys::{Float32Array, WebAssembly};
 use nalgebra::{Matrix4, Translation, Vector3};
@@ -43,7 +41,6 @@ cfg_if! {
         static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
     }
 }
-const TAU: f32 = 2. * std::f32::consts::PI;
 
 #[derive(Debug)]
 struct ProjectionMatrix {

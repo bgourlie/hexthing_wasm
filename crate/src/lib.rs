@@ -321,8 +321,31 @@ impl Component for Pos {
     type Storage = VecStorage<Self>;
 }
 
+pub struct Game {
+    world: World,
+    dispatcher: Dispatcher<'static, 'static>
+}
+
+impl Game {
+    fn step(&mut self) {
+        self.dispatcher.dispatch(&self.world.res);
+
+        // Maintain dynamically added and removed entities in dispatch.
+        // This is what actually executes changes done by `LazyUpdate`.
+        self.world.maintain();
+    }
+}
+
+pub fn main_loop(mut game: Game) {
+    game.step();
+    let closure = Closure::wrap(Box::new(move || main_loop(game)) as Box<Fn()>);
+    let window = web_sys::window().expect("Couldn't get window instance");
+    window.request_animation_frame(closure.as_ref().unchecked_ref());
+    closure.forget(); // not actually leaking memory
+}
+
 #[wasm_bindgen]
-pub fn draw() {
+pub fn start() {
     let document = web_sys::window().unwrap().document().unwrap();
     let canvas = document.get_element_by_id("canvas").unwrap();
     let canvas: web_sys::HtmlCanvasElement = canvas
@@ -445,9 +468,6 @@ pub fn draw() {
         cur_y += quarter_height;
     }
 
-    dispatcher.dispatch(&world.res);
 
-    // Maintain dynamically added and removed entities in dispatch.
-    // This is what actually executes changes done by `LazyUpdate`.
-    world.maintain();
+    main_loop(Game { world, dispatcher });
 }

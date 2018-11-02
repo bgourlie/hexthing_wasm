@@ -1,3 +1,3 @@
 import("../crate/pkg").then(module => {
-  module.draw();
+  module.start();
 });
